@@ -41,7 +41,7 @@ import (
 	"istio.io/istio/pkg/version"
 )
 
-var scope = log.RegisterScope("runtime", "Galley runtime", 0)
+var scope = log.RegisterScope("server", "Galley server debugging", 0)
 
 // Server is the main entry point into the Galley code.
 type Server struct {
