@@ -119,6 +119,13 @@ func newServer(a *Args, p patchTable) (*Server, error) {
 		}
 	}
 
+	defer func() {
+		// If return with error, need to close the server.
+		if err != nil {
+			_ = s.Close()
+		}
+	}()
+
 	processorCfg := runtime.Config{
 		DomainSuffix: a.DomainSuffix,
 		Mesh:         mesh,
@@ -163,7 +170,6 @@ func newServer(a *Args, p patchTable) (*Server, error) {
 	}
 
 	if s.listener, err = p.netListen(network, address); err != nil {
-		_ = s.Close()
 		return nil, fmt.Errorf("unable to listen: %v", err)
 	}
 
@@ -198,12 +204,13 @@ func (s *Server) Wait() error {
 	}
 
 	err := <-s.shutdown
-	s.shutdown = nil
 	return err
 }
 
 // Close cleans up resources used by the server.
 func (s *Server) Close() error {
+
+	scope.Info("in Close method")
 	if s.stopCh != nil {
 		close(s.stopCh)
 		s.stopCh = nil
@@ -212,6 +219,7 @@ func (s *Server) Close() error {
 	if s.shutdown != nil {
 		s.grpcServer.GracefulStop()
 		_ = s.Wait()
+		s.shutdown = nil
 	}
 
 	if s.controlZ != nil {
