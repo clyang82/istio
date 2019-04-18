@@ -138,8 +138,7 @@ func (configgen *ConfigGeneratorImpl) BuildClusters(env *model.Environment, prox
 
 	// Add a blackhole and passthrough cluster for catching traffic to unresolved routes
 	// DO NOT CALL PLUGINS for these two clusters.
-	clusters = append(clusters, buildBlackHoleCluster(env))
-	clusters = append(clusters, buildDefaultPassthroughCluster(env))
+	clusters = append(clusters, buildBlackHoleCluster(env), buildDefaultPassthroughCluster(env))
 
 	return normalizeClusters(push, proxy, clusters), nil
 }
@@ -815,6 +814,12 @@ func applyLoadBalancer(cluster *apiv2.Cluster, lb *networking.LoadBalancerSettin
 		}
 	}
 	if lb == nil {
+		return
+	}
+
+	// Original destination service discovery must be used with the original destination load balancer.
+	if cluster.GetClusterDiscoveryType().Equal(&apiv2.Cluster_Type{Type: apiv2.Cluster_ORIGINAL_DST}) {
+		cluster.LbPolicy = apiv2.Cluster_ORIGINAL_DST_LB
 		return
 	}
 
