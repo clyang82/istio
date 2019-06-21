@@ -450,27 +450,27 @@ func (wh *Webhook) admitPilot(request *admissionv1beta1.AdmissionRequest) *admis
 
 	var obj crd.IstioKind
 	if err := yaml.Unmarshal(request.Object.Raw, &obj); err != nil {
-		scope.Infof("cannot decode configuration: %v", err)
+		scope.Errorf("cannot decode configuration: %v", err)
 		reportValidationFailed(request, reasonYamlDecodeError)
 		return toAdmissionResponse(fmt.Errorf("cannot decode configuration: %v", err))
 	}
 
 	schema, exists := wh.descriptor.GetByType(crd.CamelCaseToKebabCase(obj.Kind))
 	if !exists {
-		scope.Infof("unrecognized type %v", obj.Kind)
+		scope.Errorf("unrecognized type %v", obj.Kind)
 		reportValidationFailed(request, reasonUnknownType)
 		return toAdmissionResponse(fmt.Errorf("unrecognized type %v", obj.Kind))
 	}
 
 	out, err := crd.ConvertObject(schema, &obj, wh.domainSuffix)
 	if err != nil {
-		scope.Infof("error decoding configuration: %v", err)
+		scope.Errorf("error decoding configuration: %v", err)
 		reportValidationFailed(request, reasonCRDConversionError)
 		return toAdmissionResponse(fmt.Errorf("error decoding configuration: %v", err))
 	}
 
 	if err := schema.Validate(out.Name, out.Namespace, out.Spec); err != nil {
-		scope.Infof("configuration is invalid: %v", err)
+		scope.Errorf("configuration is invalid: %v", err)
 		reportValidationFailed(request, reasonInvalidConfig)
 		return toAdmissionResponse(fmt.Errorf("configuration is invalid: %v", err))
 	}
@@ -536,13 +536,13 @@ func (wh *Webhook) admitMixer(request *admissionv1beta1.AdmissionRequest) *admis
 func checkFields(raw []byte, kind string, namespace string, name string) (string, error) {
 	trial := make(map[string]json.RawMessage)
 	if err := yaml.Unmarshal(raw, &trial); err != nil {
-		scope.Infof("cannot decode configuration fields: %v", err)
+		scope.Errorf("cannot decode configuration fields: %v", err)
 		return reasonYamlDecodeError, fmt.Errorf("cannot decode configuration fields: %v", err)
 	}
 
 	for key := range trial {
 		if _, ok := validFields[key]; !ok {
-			scope.Infof("unknown field %q on %s resource %s/%s",
+			scope.Errorf("unknown field %q on %s resource %s/%s",
 				key, kind, namespace, name)
 			return reasonInvalidConfig, fmt.Errorf("unknown field %q on %s resource %s/%s",
 				key, kind, namespace, name)
